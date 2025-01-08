@@ -20,6 +20,7 @@ def download_audio(video_url):
             'preferredquality': '192',
         }],
         'outtmpl': output_path,  # Save to 'audio.mp3'
+        'ffmpeg_location': '/app/ffmpeg/ffmpeg-*/ffmpeg',
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
