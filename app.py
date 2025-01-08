@@ -13,6 +13,10 @@ def download_audio(video_url):
     ydl_opts = {
         'format': 'm4a/bestaudio/best',  # The best audio version in m4a format
         'outtmpl': '%(id)s.%(ext)s',  # The output name should be the id followed by the extension
+        'postprocessors': [{  # Extract audio using ffmpeg
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+         }]
         'proxy': 'dwuojzgn:wx0b3xey9xxm@64.137.42.112:5157',
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
