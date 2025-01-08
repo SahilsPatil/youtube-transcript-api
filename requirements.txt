@@ -1,3 +1,4 @@
+pytube
 gunicorn
 Flask
 youtube-transcript-api
