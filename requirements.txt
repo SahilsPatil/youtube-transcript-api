@@ -1,3 +1,6 @@
 gunicorn
 Flask
 youtube-transcript-api
+yt_dlp
+requests
+ffmpeg
