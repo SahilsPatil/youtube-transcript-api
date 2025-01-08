@@ -7,7 +7,7 @@ from time import sleep
 app = Flask(__name__)
 
 # AssemblyAI API Key
-ASSEMBLYAI_API_KEY = '6a608718f1c64d4daeda0cfb74510e11'
+ASSEMBLYAI_API_KEY = "6a608718f1c64d4daeda0cfb74510e11"
 
 # Path to save the downloaded audio temporarily
 AUDIO_PATH = 'audio.mp4'
