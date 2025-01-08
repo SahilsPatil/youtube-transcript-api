@@ -4,3 +4,4 @@ youtube-transcript-api
 yt_dlp
 requests
 ffmpeg
+assemblyai
