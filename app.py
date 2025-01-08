@@ -1,21 +1,29 @@
-from flask import Flask, request, jsonify
-import pytube
+import os
+import yt_dlp
 import requests
+from flask import Flask, jsonify, request
 from time import sleep
 
 app = Flask(__name__)
 
+# Set your AssemblyAI API key here
 ASSEMBLYAI_API_KEY = '6a608718f1c64d4daeda0cfb74510e11'
-AUDIO_PATH = 'audio.mp4'
 
 def download_audio(video_url):
-    try:
-        yt = pytube.YouTube(video_url)
-        audio_stream = yt.streams.filter(only_audio=True).first()
-        audio_stream.download(filename=AUDIO_PATH)
-        return AUDIO_PATH
-    except Exception as e:
-        return str(e)
+    ydl_opts = {
+        'format': 'm4a/bestaudio/best',  # The best audio version in m4a format
+        'outtmpl': '%(id)s.%(ext)s',  # The output name should be the id followed by the extension
+        'postprocessors': [{  # Extract audio using ffmpeg
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'm4a',
+        }]
+    }
+    
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        error_code = ydl.download([video_url])
+        if error_code != 0:
+            return None
+    return f"{video_url.split('=')[-1]}.m4a"  # Returns the file name of the downloaded audio
 
 def upload_audio(file_path):
     try:
@@ -60,8 +68,8 @@ def transcribe():
 
     # Download audio from the video
     audio_path = download_audio(video_url)
-    if "error" in audio_path:
-        return jsonify({"error": audio_path}), 500
+    if not audio_path:
+        return jsonify({"error": "Failed to download audio"}), 500
 
     # Upload the audio file to AssemblyAI
     upload_response = upload_audio(audio_path)
