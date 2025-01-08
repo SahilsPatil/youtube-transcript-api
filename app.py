@@ -13,11 +13,11 @@ def download_audio(video_url):
     ydl_opts = {
         'format': 'm4a/bestaudio/best',  # The best audio version in m4a format
         'outtmpl': '%(id)s.%(ext)s',  # The output name should be the id followed by the extension
-        'proxy': 'dwuojzgn:wx0b3xey9xxm@173.0.9.209:5792',
-        'postprocessors': [{  # Extract audio using ffmpeg
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'm4a',
-        }]
+        'proxy': 'dwuojzgn:wx0b3xey9xxm@173.0.9.70:5653',
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        },
+        
     }
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
