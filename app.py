@@ -9,6 +9,9 @@ app = Flask(__name__)
 # Set your AssemblyAI API key
 aai.settings.api_key = "6a608718f1c64d4daeda0cfb74510e11"
 
+# Store the transcription results in a dictionary (use a more permanent solution for production)
+transcriptions = {}
+
 def download_audio(video_url, filename):
     print(f"Starting download for video: {video_url}")
     ydl_opts = {
@@ -17,7 +20,7 @@ def download_audio(video_url, filename):
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         },
-        'proxy': 'dwuojzgn:wx0b3xey9xxm@64.137.42.112:5157', 
+        'proxy': 'dwuojzgn:wx0b3xey9xxm@64.137.42.112:5157',
     }
 
     try:
@@ -33,7 +36,7 @@ def download_audio(video_url, filename):
         print(f"Download error: {e}")
     return None
 
-def transcribe_audio(filename):
+def transcribe_audio(filename, transcription_id):
     print(f"Starting transcription for audio file: {filename}")
     try:
         # Transcribe the audio using AssemblyAI SDK
@@ -46,6 +49,7 @@ def transcribe_audio(filename):
             time.sleep(5)
             transcript = transcriber.get_transcript(transcript.id)  # Poll for the result
         print(f"Transcription completed successfully: {transcript.text}")
+        transcriptions[transcription_id] = transcript.text  # Store the transcript
         return transcript.text
     except Exception as e:
         print(f"Transcription failed: {str(e)}")
@@ -63,6 +67,8 @@ def transcribe():
     audio_file = f"{video_url.split('=')[-1]}.m4a"
     print(f"Received video URL: {video_url}, audio file name will be {audio_file}")
 
+    transcription_id = f"{video_url.split('=')[-1]}"  # Create a unique transcription ID
+
     # Start background thread for download and transcription
     def process_transcription():
         print("Starting background process for download and transcription...")
@@ -70,7 +76,7 @@ def transcribe():
         downloaded_audio = download_audio(video_url, audio_file)
         if downloaded_audio:
             # Perform transcription
-            transcript = transcribe_audio(downloaded_audio)
+            transcript = transcribe_audio(downloaded_audio, transcription_id)
             if transcript:
                 print(f"Transcript: {transcript}")
             else:
@@ -82,8 +88,15 @@ def transcribe():
     thread = Thread(target=process_transcription)
     thread.start()
 
-    # Return immediately with a status message
-    return jsonify({"message": "Transcription is being processed. Check back later for the result."}), 202
+    # Return immediately with a status message and transcription ID
+    return jsonify({"message": "Transcription is being processed. Check back later for the result.", "transcription_id": transcription_id}), 202
+
+@app.route('/get_transcript/<transcription_id>', methods=['GET'])
+def get_transcript(transcription_id):
+    if transcription_id not in transcriptions:
+        return jsonify({"error": "Transcription not found or still in progress"}), 404
+    transcript = transcriptions[transcription_id]
+    return jsonify({"transcript": transcript})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
