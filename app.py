@@ -109,6 +109,7 @@ import yt_dlp
 import assemblyai as aai
 from flask import Flask, jsonify, request
 from threading import Thread
+from queue import Queue
 import time
 
 app = Flask(__name__)
@@ -119,7 +120,7 @@ aai.settings.api_key = "6a608718f1c64d4daeda0cfb74510e11"
 # Store the transcription results in a dictionary (use a more permanent solution for production)
 transcriptions = {}
 
-def download_audio(video_url, filename):
+def download_audio(video_url, filename, result_queue):
     print(f"Starting download for video: {video_url}")
     ydl_opts = {
         'format': 'm4a/bestaudio/best',  # The best audio version in m4a format
@@ -136,12 +137,13 @@ def download_audio(video_url, filename):
             error_code = ydl.download([video_url])
             if error_code == 0:
                 print(f"Audio download completed successfully: {filename}")
-                return filename  # Return the file name if successful
+                result_queue.put((True, filename))  # Send success result to the queue
             else:
                 print(f"Error occurred during download: {error_code}")
+                result_queue.put((False, "Error occurred during download."))  # Send error message to the queue
     except Exception as e:
         print(f"Download error: {e}")
-    return None
+        result_queue.put((False, f"Download error: {str(e)}"))  # Send error message to the queue
 
 def transcribe_audio(filename, transcription_id):
     print(f"Starting transcription for audio file: {filename}")
@@ -176,28 +178,37 @@ def transcribe():
 
     transcription_id = f"{video_url.split('=')[-1]}"  # Create a unique transcription ID
 
+    # Create a Queue to handle results from the background thread
+    result_queue = Queue()
+
     # Start background thread for download and transcription
     def process_transcription():
         print("Starting background process for download and transcription...")
 
         # Download audio
-        downloaded_audio = download_audio(video_url, audio_file)
-        if downloaded_audio:
+        downloaded_audio = download_audio(video_url, audio_file, result_queue)
+        success, result = result_queue.get()  # Get result from the queue
+
+        if success:
             # Perform transcription
-            transcript = transcribe_audio(downloaded_audio, transcription_id)
+            transcript = transcribe_audio(result, transcription_id)
             if transcript:
                 print(f"Transcript: {transcript}")
             else:
                 print("Transcription failed.")
         else:
-            print("Audio download failed.")
-            # Send error response for failed download
-            error_message = "Error occurred during video download."
-            return jsonify({"error": error_message}), 500
+            print(f"Audio download failed: {result}")
+            # Handle the error response by sending it back to the main thread
+            result_queue.put((False, result))  # Send error to the main thread
 
     # Start the background thread
     thread = Thread(target=process_transcription)
     thread.start()
+
+    # Get the result from the queue to handle it in the main thread
+    success, error_message = result_queue.get()
+    if not success:
+        return jsonify({"error": error_message}), 500
 
     # Return immediately with a status message and transcription ID
     return jsonify({"message": "Transcription is being processed. Check back later for the result.", "transcription_id": transcription_id}), 202
@@ -211,4 +222,3 @@ def get_transcript(transcription_id):
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=8080)
-
